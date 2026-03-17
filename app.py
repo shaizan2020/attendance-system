@@ -1,6 +1,5 @@
 import os
 from flask import Flask, redirect, url_for, session
-from flask_session import Session
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,9 +13,6 @@ from routes.student import student_bp
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
-    # Flask-Session
-    Session(app)
 
     # Register blueprints
     app.register_blueprint(auth_bp)
