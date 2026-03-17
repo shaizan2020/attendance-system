@@ -102,38 +102,41 @@ def get_course_attendance_report(course_id) -> list:
     total_sessions = db.attendance_sessions.count_documents({'course_id': course_id})
 
     pipeline = [
-        {'$match': {'course_id': course_id}},
-        {'$group': {
-            '_id': '$student_id',
-            'attended': {'$sum': 1},
-            'last_attended': {'$max': '$marked_at'}
-        }},
+        {'$match': {'enrolled_courses': course_id}},
         {'$lookup': {
-            'from': 'users',
-            'localField': '_id',
-            'foreignField': '_id',
-            'as': 'student_info'
+            'from': 'attendance_records',
+            'let': {'sid': '$_id'},
+            'pipeline': [
+                {'$match': {
+                    '$expr': {
+                        '$and': [
+                            {'$eq': ['$course_id', course_id]},
+                            {'$eq': ['$student_id', '$$sid']}
+                        ]
+                    }
+                }}
+            ],
+            'as': 'attendance_info'
         }},
-        {'$unwind': '$student_info'},
         {'$project': {
             'student_id': '$_id',
-            'name': '$student_info.name',
-            'email': '$student_info.email',
-            'student_id_num': '$student_info.student_id',
-            'attended': 1,
-            'last_attended': 1,
+            'name': 1,
+            'email': 1,
+            'student_id_num': '$student_id',
+            'attended': {'$size': '$attendance_info'},
+            'last_attended': {'$max': '$attendance_info.marked_at'},
             'total_sessions': {'$literal': total_sessions},
             'percentage': {
                 '$cond': [
                     {'$eq': [total_sessions, 0]},
                     0,
-                    {'$multiply': [{'$divide': ['$attended', total_sessions]}, 100]}
+                    {'$multiply': [{'$divide': [{'$size': '$attendance_info'}, total_sessions]}, 100]}
                 ]
             }
         }},
         {'$sort': {'name': 1}}
     ]
-    return list(db.attendance_records.aggregate(pipeline))
+    return list(db.users.aggregate(pipeline))
 
 
 def get_session_attendance_count(session_id) -> int:

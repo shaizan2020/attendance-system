@@ -91,21 +91,33 @@ def view_session(session_id):
 
     course = get_course_by_id(att_session['course_id'])
 
-    # Enrich records with student names
+    # Get all students enrolled in the course
     from config import get_db
     db = get_db()
-    enriched_records = []
-    for rec in records:
-        student = db.users.find_one({'_id': rec['student_id']}, {'name': 1, 'email': 1, 'student_id': 1})
-        if student:
-            rec['student_name'] = student.get('name', 'Unknown')
-            rec['student_email'] = student.get('email', '')
-            rec['student_num'] = student.get('student_id', '')
-        enriched_records.append(rec)
+    enrolled_students = list(db.users.find({'enrolled_courses': att_session['course_id']}, {'name': 1, 'email': 1, 'student_id': 1}).sort('name', 1))
+
+    # Map records by student_id
+    record_map = {str(r['student_id']): r for r in records}
+
+    attendance_list = []
+    for student in enrolled_students:
+        sid_str = str(student['_id'])
+        is_present = sid_str in record_map
+        rec = record_map.get(sid_str, {})
+        
+        attendance_list.append({
+            'student_name': student.get('name', 'Unknown'),
+            'student_email': student.get('email', ''),
+            'student_num': student.get('student_id', ''),
+            'status': 'Present' if is_present else 'Absent',
+            'marked_at': rec.get('marked_at'),
+            'ip_address': rec.get('ip_address')
+        })
 
     return render_template('faculty/view_session.html',
                            att_session=att_session,
-                           records=enriched_records,
+                           records=records, # Kept for live count
+                           attendance_list=attendance_list,
                            qr_image=qr_image,
                            course=course)
 

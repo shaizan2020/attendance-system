@@ -82,7 +82,7 @@
                 class="btn btn-secondary btn-sm">📊 Full Report</a>
         </div>
 
-        {% if records %}
+        {% if attendance_list %}
         <div class="table-wrap">
             <table>
                 <thead>
@@ -90,12 +90,13 @@
                         <th>#</th>
                         <th>Student</th>
                         <th>Student ID</th>
+                        <th>Status</th>
                         <th>Time</th>
                         <th>IP</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceTable">
-                    {% for i, rec in enumerate(records) %}
+                    {% for i, rec in enumerate(attendance_list) %}
                     <tr>
                         <td>{{ i + 1 }}</td>
                         <td>
@@ -103,7 +104,14 @@
                             <div class="text-xs text-muted">{{ rec.student_email }}</div>
                         </td>
                         <td class="text-muted">{{ rec.student_num or '—' }}</td>
-                        <td class="text-sm">{{ rec.marked_at | strftime('%H:%M:%S') }}</td>
+                        <td>
+                            {% if rec.status == 'Present' %}
+                                <span class="badge badge-success">Present</span>
+                            {% else %}
+                                <span class="badge badge-danger">Absent</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-sm">{{ rec.marked_at | strftime('%H:%M:%S') if rec.marked_at else '—' }}</td>
                         <td class="text-xs text-muted">{{ rec.ip_address or '—' }}</td>
                     </tr>
                     {% endfor %}
@@ -112,8 +120,8 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <div class="empty-icon">⏳</div>
-            <div class="empty-text">Waiting for students to scan the QR code...</div>
+            <div class="empty-icon">📚</div>
+            <div class="empty-text">No students are currently enrolled in this course.</div>
         </div>
         {% endif %}
     </div>

@@ -116,13 +116,27 @@
         <div class="modal-title" id="enrollModalTitle">👨‍🎓 Enroll Student</div>
         <form method="POST" id="enrollForm">
             <div class="form-group">
-                <label class="form-label">Select Student</label>
-                <select name="student_id" class="form-control" required>
-                    <option value="">— Select Student —</option>
-                    {% for s in student_list %}
-                    <option value="{{ s._id|objectid_str }}">{{ s.name }} — {{ s.student_id or s.email }}</option>
-                    {% endfor %}
-                </select>
+                <label class="form-label" style="display: block; margin-bottom: 0.5rem;">Select Students</label>
+                <div class="checkbox-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px;">
+                    {% if student_list %}
+                        <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center;">
+                            <input type="checkbox" id="selectAllStudents" style="margin-right: 8px;" onclick="toggleAllStudents(this)">
+                            <label for="selectAllStudents" style="margin-bottom: 0; font-weight: bold; cursor: pointer;">
+                                Select All
+                            </label>
+                        </div>
+                        {% for s in student_list %}
+                        <div style="margin-bottom: 8px; display: flex; align-items: center;">
+                            <input type="checkbox" name="student_ids" value="{{ s._id|objectid_str }}" id="student_{{ s._id|objectid_str }}" class="student-checkbox" style="margin-right: 8px;">
+                            <label for="student_{{ s._id|objectid_str }}" style="margin-bottom: 0; font-weight: normal; cursor: pointer;">
+                                {{ s.name }} <span class="text-muted text-sm">— {{ s.student_id or s.email }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted text-sm">No students available.</div>
+                    {% endif %}
+                </div>
             </div>
             <input type="hidden" name="action" value="enroll" />
             <div class="flex gap-12 mt-12">
@@ -139,7 +153,19 @@
     function openEnrollModal(courseId, courseName) {
         document.getElementById('enrollModalTitle').textContent = '👨‍🎓 Enroll in ' + courseName;
         document.getElementById('enrollForm').action = '/admin/courses/' + courseId + '/enroll';
+        
+        // Reset checkboxes when opening modal
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        const selectAllCb = document.getElementById('selectAllStudents');
+        if (selectAllCb) selectAllCb.checked = false;
+
         openModal('enrollModal');
+    }
+
+    function toggleAllStudents(source) {
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
     }
 </script>
 {% endblock %}

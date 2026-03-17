@@ -144,15 +144,24 @@ def delete_course_route(course_id):
 @admin_bp.route('/courses/<course_id>/enroll', methods=['POST'])
 @role_required('admin')
 def enroll_route(course_id):
-    student_id = request.form.get('student_id')
+    student_ids = request.form.getlist('student_ids')
     action = request.form.get('action', 'enroll')
 
+    if not student_ids:
+        flash('No students selected.', 'warning')
+        return redirect(url_for('admin.courses'))
+
+    count = 0
     if action == 'enroll':
-        enroll_student(course_id, student_id)
-        flash('Student enrolled.', 'success')
+        for sid in student_ids:
+            enroll_student(course_id, sid)
+            count += 1
+        flash(f'{count} student(s) enrolled.', 'success')
     else:
-        unenroll_student(course_id, student_id)
-        flash('Student unenrolled.', 'info')
+        for sid in student_ids:
+            unenroll_student(course_id, sid)
+            count += 1
+        flash(f'{count} student(s) unenrolled.', 'info')
 
     return redirect(url_for('admin.courses'))
 
