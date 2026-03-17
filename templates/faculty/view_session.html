@@ -72,17 +72,24 @@
 
     <!-- Right: Attendance List -->
     <div class="card">
-        <div class="card-header">
-            <div>
-                <div class="card-title">✅ Attendance List</div>
-                <div class="card-subtitle">{{ course.course_name if course else '' }} | {{ att_session.created_at |
-                    strftime('%b %d, %Y') }}</div>
+        <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div class="card-title">✅ Attendance List</div>
+                    <div class="card-subtitle">{{ course.course_name if course else '' }} | {{ att_session.created_at | strftime('%b %d, %Y') }}</div>
+                </div>
+                <div class="flex gap-8">
+                    <a href="{{ url_for('faculty.export_session_csv_route', session_id=att_session._id|objectid_str) }}" class="btn btn-success btn-sm">⬇️ Export Session CSV</a>
+                    <a href="{{ url_for('faculty.reports') }}?course_id={{ att_session.course_id|objectid_str }}" class="btn btn-secondary btn-sm">📊 Full Course Report</a>
+                </div>
             </div>
-            <a href="{{ url_for('faculty.reports') }}?course_id={{ att_session.course_id|objectid_str }}"
-                class="btn btn-secondary btn-sm">📊 Full Report</a>
         </div>
 
         {% if attendance_list %}
+        
+        <!-- Present Students Table -->
+        <h3 style="margin: 20px 20px 10px; font-size: 16px; color: var(--success);">🟢 Present Students ({{ present_list|length }})</h3>
+        {% if present_list %}
         <div class="table-wrap">
             <table>
                 <thead>
@@ -95,8 +102,8 @@
                         <th>IP</th>
                     </tr>
                 </thead>
-                <tbody id="attendanceTable">
-                    {% for i, rec in enumerate(attendance_list) %}
+                <tbody id="presentTable">
+                    {% for i, rec in enumerate(present_list) %}
                     <tr>
                         <td>{{ i + 1 }}</td>
                         <td>
@@ -104,20 +111,54 @@
                             <div class="text-xs text-muted">{{ rec.student_email }}</div>
                         </td>
                         <td class="text-muted">{{ rec.student_num or '—' }}</td>
-                        <td>
-                            {% if rec.status == 'Present' %}
-                                <span class="badge badge-success">Present</span>
-                            {% else %}
-                                <span class="badge badge-danger">Absent</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-sm">{{ rec.marked_at | strftime('%H:%M:%S') if rec.marked_at else '—' }}</td>
+                        <td><span class="badge badge-success">Present</span></td>
+                        <td class="text-sm">{{ rec.marked_at | strftime('%H:%M:%S') }}</td>
                         <td class="text-xs text-muted">{{ rec.ip_address or '—' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="empty-state" style="padding: 20px;">
+            <div class="text-muted">No students are currently present.</div>
+        </div>
+        {% endif %}
+        
+        <!-- Absent Students Table -->
+        <h3 style="margin: 30px 20px 10px; font-size: 16px; color: var(--danger);">🔴 Absent Students ({{ absent_list|length }})</h3>
+        {% if absent_list %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="absentTable">
+                    {% for i, rec in enumerate(absent_list) %}
+                    <tr>
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                            <div style="font-weight:600;">{{ rec.student_name }}</div>
+                            <div class="text-xs text-muted">{{ rec.student_email }}</div>
+                        </td>
+                        <td class="text-muted">{{ rec.student_num or '—' }}</td>
+                        <td><span class="badge badge-danger">Absent</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 20px;">
+            <div class="text-muted">All students are present! 🎉</div>
+        </div>
+        {% endif %}
+        
         {% else %}
         <div class="empty-state">
             <div class="empty-icon">📚</div>

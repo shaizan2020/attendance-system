@@ -41,6 +41,71 @@ def generate_course_csv(course_id) -> str:
     return output.getvalue()
 
 
+def generate_session_csv(session_id) -> str:
+    """
+    Generate a CSV string for a specific attendance session, separated by Present and Absent students.
+    Columns: Student ID, Name, Email, Status, Marked Time
+    """
+    db = get_db()
+    if isinstance(session_id, str):
+        session_id = ObjectId(session_id)
+        
+    session = db.attendance_sessions.find_one({'_id': session_id})
+    if not session:
+        return ""
+
+    course_id = session['course_id']
+    enrolled_students = list(db.users.find(
+        {'enrolled_courses': course_id}, 
+        {'name': 1, 'email': 1, 'student_id': 1}
+    ).sort('name', 1))
+
+    records = list(db.attendance_records.find({'session_id': session_id}))
+    record_map = {str(r['student_id']): r for r in records}
+
+    present_list = []
+    absent_list = []
+
+    for student in enrolled_students:
+        sid_str = str(student['_id'])
+        if sid_str in record_map:
+            rec = record_map[sid_str]
+            present_list.append({
+                's_id': student.get('student_id', 'N/A'),
+                'name': student.get('name', 'N/A'),
+                'email': student.get('email', 'N/A'),
+                'status': 'Present',
+                'time': rec.get('marked_at').strftime('%Y-%m-%d %H:%M:%S') if rec.get('marked_at') else 'N/A'
+            })
+        else:
+            absent_list.append({
+                's_id': student.get('student_id', 'N/A'),
+                'name': student.get('name', 'N/A'),
+                'email': student.get('email', 'N/A'),
+                'status': 'Absent',
+                'time': 'N/A'
+            })
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Present Students Section
+    writer.writerow(['--- PRESENT STUDENTS ---'])
+    writer.writerow(['Student ID', 'Name', 'Email', 'Status', 'Marked Time'])
+    for row in present_list:
+        writer.writerow([row['s_id'], row['name'], row['email'], row['status'], row['time']])
+        
+    writer.writerow([]) # Blank line
+    
+    # Absent Students Section
+    writer.writerow(['--- ABSENT STUDENTS ---'])
+    writer.writerow(['Student ID', 'Name', 'Email', 'Status', 'Marked Time'])
+    for row in absent_list:
+        writer.writerow([row['s_id'], row['name'], row['email'], row['status'], row['time']])
+
+    return output.getvalue()
+
+
 def get_admin_analytics() -> dict:
     """Returns system-wide analytics for the admin dashboard."""
     db = get_db()

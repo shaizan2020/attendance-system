@@ -100,26 +100,55 @@ def view_session(session_id):
     record_map = {str(r['student_id']): r for r in records}
 
     attendance_list = []
+    present_list = []
+    absent_list = []
+    
     for student in enrolled_students:
         sid_str = str(student['_id'])
         is_present = sid_str in record_map
         rec = record_map.get(sid_str, {})
         
-        attendance_list.append({
+        info = {
             'student_name': student.get('name', 'Unknown'),
             'student_email': student.get('email', ''),
             'student_num': student.get('student_id', ''),
             'status': 'Present' if is_present else 'Absent',
             'marked_at': rec.get('marked_at'),
             'ip_address': rec.get('ip_address')
-        })
+        }
+        
+        attendance_list.append(info)
+        if is_present:
+            present_list.append(info)
+        else:
+            absent_list.append(info)
 
     return render_template('faculty/view_session.html',
                            att_session=att_session,
                            records=records, # Kept for live count
                            attendance_list=attendance_list,
+                           present_list=present_list,
+                           absent_list=absent_list,
                            qr_image=qr_image,
                            course=course)
+
+
+@faculty_bp.route('/sessions/<session_id>/export')
+@role_required('faculty')
+def export_session_csv_route(session_id):
+    from utils.reports import generate_session_csv
+    att_session = get_session_by_id(session_id)
+    if not att_session or str(att_session['faculty_id']) != session['user_id']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('faculty.dashboard'))
+
+    csv_data = generate_session_csv(session_id)
+    response = make_response(csv_data)
+    date_str = att_session['created_at'].strftime('%Y%m%d')
+    filename = f"session_attendance_{date_str}.csv"
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.headers['Content-Type'] = 'text/csv'
+    return response
 
 
 @faculty_bp.route('/sessions/<session_id>/close', methods=['POST'])
