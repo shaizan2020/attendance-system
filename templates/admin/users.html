@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Users{% endblock %}
+{% block page_title %}Manage Users{% endblock %}
+{% block page_subtitle %}Create, edit, and delete system users{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('admin.dashboard') }}" class="nav-link">
+    <span class="nav-icon">📊</span> Dashboard
+</a>
+<a href="{{ url_for('admin.users') }}" class="nav-link active">
+    <span class="nav-icon">👥</span> Manage Users
+</a>
+<a href="{{ url_for('admin.courses') }}" class="nav-link">
+    <span class="nav-icon">📚</span> Manage Courses
+</a>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" onclick="openModal('createUserModal')">
+    ➕ Add User
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">👥 All Users <span class="badge badge-primary">{{ users|length }}</span></div>
+        </div>
+        <div class="flex gap-8">
+            <input type="text" id="userSearch" class="form-control" placeholder="🔍 Search users..."
+                style="width:220px;" oninput="filterTable(this,'userTable')" />
+        </div>
+    </div>
+
+    {% if users %}
+    <div class="table-wrap">
+        <table id="userTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Student ID</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div class="flex gap-8" style="align-items:center;">
+                            <div class="user-avatar" style="width:30px;height:30px;font-size:12px;">{{
+                                user.name[0]|upper }}</div>
+                            <span style="font-weight:600;">{{ user.name }}</span>
+                        </div>
+                    </td>
+                    <td class="text-muted">{{ user.email }}</td>
+                    <td>
+                        {% if user.role == 'admin' %}
+                        <span class="badge badge-purple">👨‍💼 Admin</span>
+                        {% elif user.role == 'faculty' %}
+                        <span class="badge badge-primary">👨‍🏫 Faculty</span>
+                        {% else %}
+                        <span class="badge badge-success">👨‍🎓 Student</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ user.student_id or '—' }}</td>
+                    <td class="text-muted text-sm">{{ user.created_at | strftime('%b %d, %Y') }}</td>
+                    <td>
+                        <div class="flex gap-8">
+                            <button class="btn btn-secondary btn-sm"
+                                onclick="openEditModal('{{ user._id|objectid_str }}','{{ user.name }}','{{ user.email }}','{{ user.role }}')">
+                                ✏️ Edit
+                            </button>
+                            <form method="POST"
+                                action="{{ url_for('admin.delete_user_route', user_id=user._id|objectid_str) }}"
+                                onsubmit="return confirm('Delete {{ user.name }}?')">
+                                <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-text">No users yet. Click <strong>Add User</strong> to get started.</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create User Modal -->
+<div class="modal-backdrop" id="createUserModal">
+    <div class="modal-box">
+        <div class="modal-title">➕ Create New User</div>
+        <form method="POST" action="{{ url_for('admin.create_user_route') }}">
+            <div class="grid-2 grid mb-16">
+                <div class="form-group mb-0">
+                    <label class="form-label">Full Name*</label>
+                    <input type="text" name="name" class="form-control" placeholder="John Doe" required />
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Role*</label>
+                    <select name="role" class="form-control" required>
+                        <option value="student">👨‍🎓 Student</option>
+                        <option value="faculty">👨‍🏫 Faculty</option>
+                        <option value="admin">👨‍💼 Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address*</label>
+                <input type="email" name="email" class="form-control" placeholder="user@example.com" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password*</label>
+                <input type="password" name="password" class="form-control" placeholder="Min 6 characters" required
+                    minlength="6" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Student ID <span class="text-muted">(students only)</span></label>
+                <input type="text" name="student_id" class="form-control" placeholder="e.g. STU-2024-001" />
+            </div>
+            <div class="flex gap-12 mt-12">
+                <button type="submit" class="btn btn-primary">✅ Create User</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-backdrop" id="editUserModal">
+    <div class="modal-box">
+        <div class="modal-title">✏️ Edit User</div>
+        <form method="POST" id="editUserForm">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="name" id="editName" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" id="editEmail" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <select name="role" id="editRole" class="form-control">
+                    <option value="student">Student</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Password <span class="text-muted">(leave blank to keep
+                        current)</span></label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" />
+            </div>
+            <div class="flex gap-12 mt-12">
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openEditModal(id, name, email, role) {
+        document.getElementById('editName').value = name;
+        document.getElementById('editEmail').value = email;
+        document.getElementById('editRole').value = role;
+        document.getElementById('editUserForm').action = '/admin/users/' + id + '/edit';
+        openModal('editUserModal');
+    }
+</script>
+{% endblock %}

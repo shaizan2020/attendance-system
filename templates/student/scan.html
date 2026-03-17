@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan QR Code{% endblock %}
+{% block page_title %}Scan QR Code{% endblock %}
+{% block page_subtitle %}Mark your attendance by scanning the faculty's QR code{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('student.dashboard') }}" class="nav-link">
+    <span class="nav-icon">🏠</span> Dashboard
+</a>
+<a href="{{ url_for('student.scan') }}" class="nav-link active">
+    <span class="nav-icon">📷</span> Scan QR Code
+</a>
+<a href="{{ url_for('student.history') }}" class="nav-link">
+    <span class="nav-icon">📋</span> Attendance History
+</a>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 640px; margin: 0 auto;">
+
+    <!-- Result Banner -->
+    <div id="scanResult" style="display:none; margin-bottom: 20px;"></div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">📷 QR Scanner</div>
+                <div class="card-subtitle">Point your camera at the attendance QR code</div>
+            </div>
+            <div class="flex gap-8" id="scanButtons">
+                <button class="btn btn-primary btn-sm" id="startBtn" onclick="startScan()">▶️ Start Camera</button>
+                <button class="btn btn-secondary btn-sm" id="stopBtn" onclick="stopScan()" style="display:none;">⏹️
+                    Stop</button>
+            </div>
+        </div>
+
+        <!-- Camera Preview -->
+        <div id="reader" style="width:100%; min-height: 300px;"></div>
+
+        <div class="divider"></div>
+
+        <!-- Manual Entry Fallback -->
+        <div>
+            <div class="card-title mb-16" style="font-size:14px;">📋 Manual Entry <span
+                    class="text-xs text-muted">(paste QR data)</span></div>
+            <div class="flex gap-8">
+                <textarea id="manualQr" class="form-control" rows="3"
+                    placeholder='Paste the QR code JSON data here... {"session_id":"...","token":"...","expires_at":"..."}'
+                    style="font-family:monospace; font-size:12px; resize:vertical;"></textarea>
+            </div>
+            <button class="btn btn-success w-100 mt-12" onclick="submitManual()">
+                ✅ Mark Attendance
+            </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="background: var(--bg-input); border-radius: var(--radius-sm); padding: 14px; font-size: 12px;">
+            <div style="font-weight:600; margin-bottom:8px;">📌 Instructions</div>
+            <ol style="padding-left: 16px; line-height: 2; color: var(--text-muted);">
+                <li>Click <strong style="color:var(--text-primary);">Start Camera</strong> and allow camera access</li>
+                <li>Point camera at the QR code shown by your faculty</li>
+                <li>Wait for automatic detection — attendance marks instantly</li>
+                <li>Alternatively, paste the QR JSON data manually</li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let html5QrCode = null;
+    let scanning = false;
+
+    async function startScan() {
+        try {
+            html5QrCode = new Html5Qrcode("reader");
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                () => { }
+            );
+            scanning = true;
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = '';
+        } catch (e) {
+            showResult(false, 'Camera access denied or not available. Use manual entry below.');
+        }
+    }
+
+    async function stopScan() {
+        if (html5QrCode && scanning) {
+            await html5QrCode.stop();
+            scanning = false;
+            document.getElementById('startBtn').style.display = '';
+            document.getElementById('stopBtn').style.display = 'none';
+        }
+    }
+
+    async function onScanSuccess(qrData) {
+        await stopScan();
+        await markAttendance(qrData);
+    }
+
+    async function submitManual() {
+        const data = document.getElementById('manualQr').value.trim();
+        if (!data) { showResult(false, 'Please paste the QR code data.'); return; }
+        await markAttendance(data);
+    }
+
+    async function markAttendance(qrData) {
+        showResult(null, '⏳ Processing...');
+        try {
+            const res = await fetch('/student/mark', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr_data: qrData })
+            });
+            const data = await res.json();
+            showResult(data.success, data.message);
+            if (data.success) {
+                setTimeout(() => { window.location.href = '/student/dashboard'; }, 2500);
+            }
+        } catch (e) {
+            showResult(false, 'Network error. Please try again.');
+        }
+    }
+
+    function showResult(success, message) {
+        const el = document.getElementById('scanResult');
+        el.style.display = 'block';
+        if (success === null) {
+            el.className = 'alert alert-info';
+            el.style.position = 'relative';
+            el.style.animation = 'none';
+        } else if (success) {
+            el.className = 'alert alert-success';
+            el.style.position = 'relative';
+            el.style.animation = 'none';
+        } else {
+            el.className = 'alert alert-danger';
+            el.style.position = 'relative';
+            el.style.animation = 'none';
+        }
+        el.innerHTML = '<span>' + (success === true ? '✅' : success === false ? '❌' : 'ℹ️') + '</span><span>' + message + '</span>';
+    }
+</script>
+{% endblock %}

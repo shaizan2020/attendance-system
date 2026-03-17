@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Reports{% endblock %}
+{% block page_title %}Attendance Reports{% endblock %}
+{% block page_subtitle %}View and export course attendance data{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('faculty.dashboard') }}" class="nav-link">
+    <span class="nav-icon">🏠</span> Dashboard
+</a>
+<a href="{{ url_for('faculty.create_session_route') }}" class="nav-link">
+    <span class="nav-icon">📱</span> New Session
+</a>
+<a href="{{ url_for('faculty.reports') }}" class="nav-link active">
+    <span class="nav-icon">📊</span> Reports
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Course Selector -->
+<div class="card mb-20">
+    <div class="card-title mb-16">📚 Select Course</div>
+    <form method="GET" action="{{ url_for('faculty.reports') }}" class="flex gap-12 flex-wrap">
+        <select name="course_id" class="form-control" style="max-width:340px;" required>
+            <option value="">— Choose a course —</option>
+            {% for course in courses %}
+            <option value="{{ course._id|objectid_str }}" {% if selected_course_id==course._id|objectid_str %}selected{%
+                endif %}>
+                {{ course.course_code }} — {{ course.course_name }}
+            </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">📊 View Report</button>
+        {% if selected_course_id %}
+        <a href="{{ url_for('faculty.export_csv', course_id=selected_course_id) }}" class="btn btn-success">⬇️ Export
+            CSV</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Report Table -->
+{% if selected_course %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">📋 {{ selected_course.course_name }}</div>
+            <div class="card-subtitle">{{ selected_course.course_code }} — Attendance Report</div>
+        </div>
+        <span class="badge badge-primary">{{ report_data|length }} students</span>
+    </div>
+
+    {% if report_data %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>ID</th>
+                    <th>Sessions Attended</th>
+                    <th>Total Sessions</th>
+                    <th>Attendance %</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report_data %}
+                {% set pct = row.percentage | round(1) %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600;">{{ row.name }}</div>
+                        <div class="text-xs text-muted">{{ row.email }}</div>
+                    </td>
+                    <td class="text-muted">{{ row.student_id_num or '—' }}</td>
+                    <td><span class="badge badge-success">{{ row.attended }}</span></td>
+                    <td class="text-muted">{{ row.total_sessions }}</td>
+                    <td>
+                        <div class="flex gap-8" style="align-items:center; min-width:120px;">
+                            <div class="progress-bar" style="flex:1;">
+                                <div class="progress-fill {% if pct >= 75 %}success{% elif pct >= 50 %}warning{% else %}danger{% endif %}"
+                                    style="width: {{ [pct, 100]|min }}%;"></div>
+                            </div>
+                            <span style="font-weight:700; font-size:13px; min-width:40px; text-align:right;">{{ pct
+                                }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if pct >= 75 %}
+                        <span class="badge badge-success">✅ Good</span>
+                        {% elif pct >= 50 %}
+                        <span class="badge badge-warning">⚠️ At Risk</span>
+                        {% else %}
+                        <span class="badge badge-danger">❌ Low</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text">No attendance records yet for this course.</div>
+    </div>
+    {% endif %}
+</div>
+{% elif courses %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text">Select a course above to view its attendance report.</div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon">📚</div>
+        <div class="empty-text">No courses assigned to you yet. Contact administrator.</div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

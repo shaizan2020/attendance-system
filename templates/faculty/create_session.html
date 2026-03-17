@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Attendance Session{% endblock %}
+{% block page_title %}Create Session{% endblock %}
+{% block page_subtitle %}Generate a time-limited QR code for student attendance{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('faculty.dashboard') }}" class="nav-link">
+    <span class="nav-icon">🏠</span> Dashboard
+</a>
+<a href="{{ url_for('faculty.create_session_route') }}" class="nav-link active">
+    <span class="nav-icon">📱</span> New Session
+</a>
+<a href="{{ url_for('faculty.reports') }}" class="nav-link">
+    <span class="nav-icon">📊</span> Reports
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+
+    <!-- Left: Create Form -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">📅 New Attendance Session</div>
+                <div class="card-subtitle">Students will scan the generated QR code</div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('faculty.create_session_route') }}">
+            <div class="form-group">
+                <label class="form-label">Select Course*</label>
+                <select name="course_id" class="form-control" required>
+                    <option value="">— Choose a course —</option>
+                    {% for course in courses %}
+                    <option value="{{ course._id|objectid_str }}" {% if att_session and
+                        att_session.course_id|string==course._id|string %}selected{% endif %}>
+                        {{ course.course_code }} — {{ course.course_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">QR Code Expiry (minutes)*</label>
+                <select name="expiry_minutes" class="form-control">
+                    <option value="5">5 minutes</option>
+                    <option value="10" selected>10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">60 minutes</option>
+                </select>
+                <div class="text-xs text-muted mt-4">
+                    ⚠️ After expiry, students cannot mark attendance with this QR.
+                </div>
+            </div>
+
+            {% if not courses %}
+            <div class="alert alert-warning" style="position:relative; animation:none;">
+                ⚠️ You have no courses assigned. Contact admin.
+            </div>
+            {% else %}
+            <button type="submit" class="btn btn-primary w-100 btn-lg">
+                🚀 Generate QR Code
+            </button>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Right: QR Display -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">📱 QR Code</div>
+                <div class="card-subtitle">Share this with your students to mark attendance</div>
+            </div>
+            {% if att_session and att_session.status == 'active' %}
+            <form method="POST" action="{{ url_for('faculty.close_session_route', session_id=session_id) }}">
+                <button type="submit" class="btn btn-danger btn-sm">🔴 Close</button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if qr_image %}
+        <div class="qr-container">
+            <img src="{{ qr_image }}" alt="Attendance QR Code" id="qrImage" />
+            <div>
+                <div class="qr-expiry">
+                    ⏱️ Expires in: <span class="countdown" id="countdown">--:--</span>
+                </div>
+                <div class="text-xs text-muted text-center mt-4">
+                    Expires at {{ att_session.expires_at | strftime('%H:%M:%S') }}
+                </div>
+            </div>
+            <div class="flex gap-8">
+                <a href="{{ url_for('faculty.view_session', session_id=session_id) }}"
+                    class="btn btn-success btn-sm">👁️ View Live Attendance</a>
+                <button class="btn btn-secondary btn-sm" onclick="downloadQR()">⬇️ Download QR</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="background: var(--bg-input); border-radius: var(--radius-sm); padding: 14px; font-size: 12px;">
+            <div class="flex-between mb-8">
+                <span class="text-muted">Session ID</span>
+                <span style="font-family: monospace; color: var(--accent);">{{ session_id[:16] }}...</span>
+            </div>
+            <div class="flex-between">
+                <span class="text-muted">Status</span>
+                <span class="badge badge-success">🟢 Active</span>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="qr-container" style="min-height: 280px;">
+            <div style="font-size: 64px; opacity: 0.3;">📱</div>
+            <div class="text-muted">Create a session to generate QR code</div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if att_session %}
+<script>
+    const expiresAt = new Date("{{ att_session.expires_at.isoformat() }}");
+
+    function updateCountdown() {
+        const now = new Date();
+        const diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
+        const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+        const secs = (diff % 60).toString().padStart(2, '0');
+        const el = document.getElementById('countdown');
+        if (el) {
+            el.textContent = mins + ':' + secs;
+            if (diff < 60) el.style.color = 'var(--danger)';
+            if (diff === 0) el.textContent = 'EXPIRED';
+        }
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    function downloadQR() {
+        const img = document.getElementById('qrImage');
+        const a = document.createElement('a');
+        a.href = img.src;
+        a.download = 'attendance_qr.png';
+        a.click();
+    }
+</script>
+{% endif %}
+{% endblock %}

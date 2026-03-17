@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}AMS{% endblock %} — Attendance Management System</title>
+  <meta name="description" content="NoSQL-Based Attendance Management System powered by MongoDB"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>"/>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Flash Messages (Toast) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="alert-container" id="alertContainer">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" onclick="this.remove()">
+      <span>{% if category=='success' %}✅{% elif category=='danger' %}❌{% elif category=='warning' %}⚠️{% else %}ℹ️{% endif %}</span>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<div class="app-wrapper">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📋</div>
+      <div>
+        <div class="brand-text">AttendMS</div>
+        <div class="brand-sub">NoSQL Powered</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Navigation</div>
+      {% block sidebar_links %}{% endblock %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">{{ current_user_name[0]|upper if current_user_name else '?' }}</div>
+        <div>
+          <div class="user-name">{{ current_user_name }}</div>
+          <div class="user-role">{{ current_user_role }}</div>
+        </div>
+      </div>
+      <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary w-100">
+        🚪 Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      </div>
+      <div style="flex:1; padding: 0 16px;">
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="topbar-subtitle">{% block page_subtitle %}{% endblock %}</div>
+      </div>
+      <div class="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

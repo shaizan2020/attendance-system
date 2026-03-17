@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance History{% endblock %}
+{% block page_title %}Attendance History{% endblock %}
+{% block page_subtitle %}Your complete attendance records{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('student.dashboard') }}" class="nav-link">
+    <span class="nav-icon">🏠</span> Dashboard
+</a>
+<a href="{{ url_for('student.scan') }}" class="nav-link">
+    <span class="nav-icon">📷</span> Scan QR Code
+</a>
+<a href="{{ url_for('student.history') }}" class="nav-link active">
+    <span class="nav-icon">📋</span> Attendance History
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filter by Course -->
+<div class="card mb-20">
+    <div class="flex-between flex-wrap gap-12">
+        <div class="card-title">🔍 Filter by Course</div>
+        <form method="GET" action="{{ url_for('student.history') }}" class="flex gap-12 flex-wrap">
+            <select name="course_id" class="form-control" style="width: 280px;">
+                <option value="">All Courses</option>
+                {% for course in courses %}
+                <option value="{{ course._id|objectid_str }}" {% if selected_course_id==course._id|objectid_str
+                    %}selected{% endif %}>
+                    {{ course.course_code }} — {{ course.course_name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">🔍 Filter</button>
+            {% if selected_course_id %}
+            <a href="{{ url_for('student.history') }}" class="btn btn-secondary btn-sm">✕ Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Percentage Banner -->
+{% if selected_course and percentage is not none %}
+<div class="card mb-20"
+    style="border-color: {% if percentage >= 75 %}var(--success){% elif percentage >= 50 %}var(--warning){% else %}var(--danger){% endif %};">
+    <div class="flex-between gap-16">
+        <div>
+            <div class="card-title">{{ selected_course.course_name }}</div>
+            <div class="card-subtitle">{{ selected_course.course_code }}</div>
+        </div>
+        <div style="text-align: center;">
+            <div
+                style="font-size: 40px; font-weight: 800;
+        color: {% if percentage >= 75 %}var(--success){% elif percentage >= 50 %}var(--warning){% else %}var(--danger){% endif %}">
+                {{ percentage }}%
+            </div>
+            <div class="text-xs text-muted">Attendance Rate</div>
+        </div>
+    </div>
+    <div class="progress-bar mt-12">
+        <div class="progress-fill {% if percentage >= 75 %}success{% elif percentage >= 50 %}warning{% else %}danger{% endif %}"
+            style="width: {{ [percentage, 100]|min }}%;">
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- History Table -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">📋 Records</div>
+            <div class="card-subtitle">
+                {% if selected_course %}{{ selected_course.course_name }}{% else %}All Courses{% endif %}
+            </div>
+        </div>
+        <span class="badge badge-primary">{{ records|length }} records</span>
+    </div>
+
+    {% if records %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in records %}
+                <tr>
+                    <td>
+                        <span class="course-pill">{{ rec.course_code }}</span>
+                        <span style="margin-left:8px; font-weight:500; font-size:13px;">{{ rec.course_name }}</span>
+                    </td>
+                    <td>{{ rec.marked_at | strftime('%B %d, %Y') }}</td>
+                    <td class="text-muted">{{ rec.marked_at | strftime('%H:%M:%S') }}</td>
+                    <td><span class="badge badge-success">✅ Present</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text">No attendance records found.<br>
+            <a href="{{ url_for('student.scan') }}">Scan a QR code to mark attendance →</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

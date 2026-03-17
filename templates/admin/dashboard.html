@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block page_subtitle %}System overview and analytics{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('admin.dashboard') }}" class="nav-link active">
+    <span class="nav-icon">📊</span> Dashboard
+</a>
+<a href="{{ url_for('admin.users') }}" class="nav-link">
+    <span class="nav-icon">👥</span> Manage Users
+</a>
+<a href="{{ url_for('admin.courses') }}" class="nav-link">
+    <span class="nav-icon">📚</span> Manage Courses
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue">👨‍🎓</div>
+        <div>
+            <div class="stat-value">{{ analytics.total_students }}</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple">👨‍🏫</div>
+        <div>
+            <div class="stat-value">{{ analytics.total_faculty }}</div>
+            <div class="stat-label">Faculty Members</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green">📚</div>
+        <div>
+            <div class="stat-value">{{ analytics.total_courses }}</div>
+            <div class="stat-label">Active Courses</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon yellow">📅</div>
+        <div>
+            <div class="stat-value">{{ analytics.total_sessions }}</div>
+            <div class="stat-label">Total Sessions</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon cyan">✅</div>
+        <div>
+            <div class="stat-value">{{ analytics.total_attendance }}</div>
+            <div class="stat-label">Attendance Records</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red">🔴</div>
+        <div>
+            <div class="stat-value">{{ analytics.active_sessions }}</div>
+            <div class="stat-label">Active Sessions Now</div>
+        </div>
+    </div>
+</div>
+
+<!-- Course Analytics -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">📊 Course Analytics</div>
+            <div class="card-subtitle">Attendance breakdown by course</div>
+        </div>
+        <a href="{{ url_for('admin.courses') }}" class="btn btn-secondary btn-sm">View All Courses</a>
+    </div>
+
+    {% if analytics.top_courses %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Faculty</th>
+                    <th>Enrolled</th>
+                    <th>Total Attendance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in analytics.top_courses %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600;">{{ course.course_name }}</div>
+                        <div class="text-xs text-muted">{{ course.course_code }}</div>
+                    </td>
+                    <td>{{ course.faculty_name or 'Unassigned' }}</td>
+                    <td><span class="badge badge-primary">{{ course.enrolled_count }}</span></td>
+                    <td><span class="badge badge-success">{{ course.attendance_count }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">No courses yet.<br>
+            <a href="{{ url_for('admin.courses') }}">Create your first course →</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

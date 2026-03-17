@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Faculty Dashboard{% endblock %}
+{% block page_title %}Faculty Dashboard{% endblock %}
+{% block page_subtitle %}Manage your classes and attendance sessions{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('faculty.dashboard') }}" class="nav-link active">
+    <span class="nav-icon">🏠</span> Dashboard
+</a>
+<a href="{{ url_for('faculty.create_session_route') }}" class="nav-link">
+    <span class="nav-icon">📱</span> New Session
+</a>
+<a href="{{ url_for('faculty.reports') }}" class="nav-link">
+    <span class="nav-icon">📊</span> Reports
+</a>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('faculty.create_session_route') }}" class="btn btn-primary btn-sm">
+    ➕ Start Session
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue">📚</div>
+        <div>
+            <div class="stat-value">{{ courses|length }}</div>
+            <div class="stat-label">My Courses</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green">🔴</div>
+        <div>
+            <div class="stat-value">{{ active_sessions|length }}</div>
+            <div class="stat-label">Active Sessions</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon yellow">📅</div>
+        <div>
+            <div class="stat-value">{{ recent_sessions|length }}</div>
+            <div class="stat-label">Recent Sessions</div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Sessions -->
+{% if active_sessions %}
+<div class="card mb-20">
+    <div class="card-header">
+        <div>
+            <div class="card-title" style="color: var(--success);">🟢 Active Sessions</div>
+            <div class="card-subtitle">Currently accepting attendance</div>
+        </div>
+    </div>
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+        {% for s in active_sessions %}
+        <div class="session-card">
+            <div class="session-card-header">
+                <span class="badge badge-success">🟢 Active</span>
+                <span class="text-xs text-muted">{{ s.created_at | strftime('%H:%M') }}</span>
+            </div>
+            <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">{{ s.course_name }}</div>
+            <div class="text-sm text-muted mb-12">Expires: {{ s.expires_at | strftime('%H:%M') }}</div>
+            <a href="{{ url_for('faculty.view_session', session_id=s._id|objectid_str) }}"
+                class="btn btn-primary btn-sm w-100">
+                👁️ View Live
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Sessions Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">📋 Recent Sessions</div>
+        <a href="{{ url_for('faculty.create_session_route') }}" class="btn btn-primary btn-sm">➕ New Session</a>
+    </div>
+
+    {% if recent_sessions %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Status</th>
+                    <th>Attendance</th>
+                    <th>Created</th>
+                    <th>Expires</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in recent_sessions %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600;">{{ s.course_name }}</div>
+                        <div class="text-xs text-muted">{{ s.course_code }}</div>
+                    </td>
+                    <td>
+                        <span
+                            class="badge badge-{% if s.status=='active' %}success{% elif s.status=='closed' %}muted{% else %}danger{% endif %}">
+                            {{ s.status|capitalize }}
+                        </span>
+                    </td>
+                    <td><span class="badge badge-primary">{{ s.attendance_count }}</span></td>
+                    <td class="text-muted text-sm">{{ s.created_at | strftime('%b %d, %H:%M') }}</td>
+                    <td class="text-muted text-sm">{{ s.expires_at | strftime('%H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('faculty.view_session', session_id=s._id|objectid_str) }}"
+                            class="btn btn-secondary btn-sm">👁️ View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📅</div>
+        <div class="empty-text">No sessions yet. <a href="{{ url_for('faculty.create_session_route') }}">Create your
+                first session →</a></div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

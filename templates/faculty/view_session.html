@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Attendance{% endblock %}
+{% block page_title %}Live Attendance{% endblock %}
+{% block page_subtitle %}{{ course.course_name if course else '' }} — Real-time attendance tracking{% endblock %}
+
+{% block sidebar_links %}
+<a href="{{ url_for('faculty.dashboard') }}" class="nav-link">
+    <span class="nav-icon">🏠</span> Dashboard
+</a>
+<a href="{{ url_for('faculty.create_session_route') }}" class="nav-link">
+    <span class="nav-icon">📱</span> New Session
+</a>
+<a href="{{ url_for('faculty.reports') }}" class="nav-link">
+    <span class="nav-icon">📊</span> Reports
+</a>
+{% endblock %}
+
+{% block topbar_actions %}
+{% if att_session.status == 'active' %}
+<form method="POST" action="{{ url_for('faculty.close_session_route', session_id=att_session._id|objectid_str) }}">
+    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Close this session?')">
+        🔴 Close Session
+    </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: 1fr 2fr; gap: 24px; align-items: start;">
+
+    <!-- Left: QR + Info -->
+    <div>
+        <div class="card mb-20">
+            <div class="card-header">
+                <div class="card-title">📱 QR Code</div>
+                <span
+                    class="badge badge-{% if att_session.status=='active' %}success{% elif att_session.status=='closed' %}muted{% else %}danger{% endif %}">
+                    {{ att_session.status|capitalize }}
+                </span>
+            </div>
+            {% if qr_image %}
+            <div class="qr-container" style="padding: 20px;">
+                <img src="{{ qr_image }}" alt="QR Code" style="max-width:200px;" />
+                {% if att_session.status == 'active' %}
+                <div class="qr-expiry">⏱️ <span id="countdown" class="countdown">--:--</span></div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="qr-container" style="padding: 20px; min-height: 120px;">
+                <div class="text-muted text-sm">Session is {{ att_session.status }}. QR unavailable.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-title mb-16">📊 Live Count</div>
+            <div style="text-align:center; padding: 16px 0;">
+                <div style="font-size: 56px; font-weight: 800; color: var(--accent);" id="liveCount">
+                    {{ records|length }}
+                </div>
+                <div class="text-muted">students present</div>
+            </div>
+            {% if att_session.status == 'active' %}
+            <div class="flex-center gap-8 mt-12">
+                <div class="pulse-dot"></div>
+                <span class="text-xs text-muted">Updating live...</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right: Attendance List -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">✅ Attendance List</div>
+                <div class="card-subtitle">{{ course.course_name if course else '' }} | {{ att_session.created_at |
+                    strftime('%b %d, %Y') }}</div>
+            </div>
+            <a href="{{ url_for('faculty.reports') }}?course_id={{ att_session.course_id|objectid_str }}"
+                class="btn btn-secondary btn-sm">📊 Full Report</a>
+        </div>
+
+        {% if records %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Time</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTable">
+                    {% for i, rec in records | enumerate %}
+                    <tr>
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                            <div style="font-weight:600;">{{ rec.student_name }}</div>
+                            <div class="text-xs text-muted">{{ rec.student_email }}</div>
+                        </td>
+                        <td class="text-muted">{{ rec.student_num or '—' }}</td>
+                        <td class="text-sm">{{ rec.marked_at | strftime('%H:%M:%S') }}</td>
+                        <td class="text-xs text-muted">{{ rec.ip_address or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <div class="empty-text">Waiting for students to scan the QR code...</div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    {% if att_session.status == 'active' %}
+    const expiresAt = new Date("{{ att_session.expires_at.isoformat() }}");
+    const sessionId = "{{ att_session._id|objectid_str }}";
+
+    // Countdown
+    function updateCountdown() {
+        const diff = Math.max(0, Math.floor((expiresAt - new Date()) / 1000));
+        const el = document.getElementById('countdown');
+        if (!el) return;
+        el.textContent = String(Math.floor(diff / 60)).padStart(2, '0') + ':' + String(diff % 60).padStart(2, '0');
+        if (diff < 60) el.style.color = 'var(--danger)';
+        if (diff === 0) { el.textContent = 'EXPIRED'; clearInterval(countdownTimer); }
+    }
+    const countdownTimer = setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    // Live poll
+    let lastCount = {{ records| length }};
+    async function pollLive() {
+        try {
+            const res = await fetch('/faculty/api/sessions/' + sessionId + '/live');
+            const data = await res.json();
+            document.getElementById('liveCount').textContent = data.count;
+            if (data.count !== lastCount) {
+                lastCount = data.count;
+                location.reload(); // Full reload to show new rows
+            }
+        } catch (e) { }
+    }
+    setInterval(pollLive, 5000);
+    {% endif %}
+</script>
+{% endblock %}
