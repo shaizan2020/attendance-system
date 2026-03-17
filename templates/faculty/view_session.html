@@ -95,7 +95,7 @@
                     </tr>
                 </thead>
                 <tbody id="attendanceTable">
-                    {% for i, rec in records | enumerate %}
+                    {% for i, rec in enumerate(records) %}
                     <tr>
                         <td>{{ i + 1 }}</td>
                         <td>
