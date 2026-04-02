@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+env/
+.venv/
+
+# Environment (secrets — injected at runtime, not baked into image)
+.env
+
+# Flask session files
+flask_session/
+
+# SSL certs (local dev only)
+cert.pem
+key.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Presentation files
+AMS_NoSQL_Presentation.pptx
+generate_ppt.py
+
+# Docker & CI/CD (no need inside the image)
+Dockerfile
+docker-compose.yml
+Jenkinsfile
+README.md
+Procfile

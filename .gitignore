@@ -34,3 +34,7 @@ desktop.ini
 # PPT generator (not needed in production)
 generate_ppt.py
 AMS_NoSQL_Presentation.pptx
+
+# Docker
+docker-compose.override.yml
+.docker/
