@@ -52,7 +52,7 @@ pipeline {
                     bat """
                         docker run -d --name ${CONTAINER_NAME}-test ^
                             --env-file .env ^
-                            -p 9090:${APP_PORT} ^
+                            -p 9999:${APP_PORT} ^
                             ${IMAGE_NAME}:latest
                     """
 
