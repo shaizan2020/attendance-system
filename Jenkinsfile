@@ -9,9 +9,11 @@ pipeline {
 
     environment {
         // Docker image name
-        IMAGE_NAME    = 'attendance-system'
+        IMAGE_NAME     = 'attendance-system'
         CONTAINER_NAME = 'attendance-system'
-        APP_PORT      = '8085'
+        APP_PORT       = '8085'
+        // Path where .env is stored persistently (outside workspace)
+        ENV_FILE_PATH  = 'C:\\ProgramData\\Jenkins\\.jenkins\\env-files\\attendance-system\\.env'
     }
 
     stages {
@@ -20,6 +22,16 @@ pipeline {
             steps {
                 echo '📥 Pulling latest code from GitHub...'
                 checkout scm
+            }
+        }
+
+        stage('Prepare Environment') {
+            steps {
+                echo '🔧 Setting up environment file...'
+                script {
+                    // Copy the .env file from the persistent location into the workspace
+                    bat "copy \"${ENV_FILE_PATH}\" \".env\" /Y"
+                }
             }
         }
 
